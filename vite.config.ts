@@ -5,9 +5,20 @@ export default defineConfig({
   plugins: [react()],
   optimizeDeps: {
     exclude: ['lucide-react'],
+    esbuildOptions: {
+      define: {
+        global: 'globalThis'
+      }
+    }
+  },
+  resolve: {
+    alias: {
+      buffer: 'buffer/',
+      process: 'process/browser'
+    }
   },
   base: '/',
   server: {
     historyApiFallback: true,
-  },
+  }
 });
