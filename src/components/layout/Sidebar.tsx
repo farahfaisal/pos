@@ -11,7 +11,8 @@ import {
   Settings, 
   LogOut,
   UserCircle,
-  CreditCard
+  CreditCard,
+  Coffee
 } from 'lucide-react';
 
 const Sidebar: React.FC = () => {
@@ -77,7 +78,10 @@ const Sidebar: React.FC = () => {
   return (
     <div className="w-64 bg-white shadow-lg flex flex-col">
       <div className="p-4 border-b">
-        <h1 className="text-xl font-bold text-red-800">نظام نقطة البيع</h1>
+        <div className="flex items-center gap-3">
+          <Coffee size={24} className="text-amber-600" />
+          <h1 className="text-xl font-bold text-gray-800">نور كافيه</h1>
+        </div>
       </div>
       
       <nav className="flex-1 p-4 space-y-2">
@@ -94,7 +98,7 @@ const Sidebar: React.FC = () => {
               className={({ isActive }) => 
                 `flex items-center p-3 rounded-lg transition-colors ${
                   isActive 
-                    ? 'bg-red-100 text-red-800' 
+                    ? 'bg-amber-100 text-amber-800' 
                     : 'text-gray-700 hover:bg-gray-100'
                 }`
               }
