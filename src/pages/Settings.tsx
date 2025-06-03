@@ -8,3 +8,5 @@ const storeSettings = {
   vat: '',
   website: 'https://noorcaffee.store',
 };
+
+export default storeSettings
