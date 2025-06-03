@@ -10,4 +10,14 @@ export default defineConfig({
   server: {
     historyApiFallback: true,
   },
+  define: {
+    global: 'globalThis',
+    'process.env': {},
+    Buffer: ['buffer', 'Buffer'],
+  },
+  resolve: {
+    alias: {
+      buffer: 'buffer',
+    },
+  },
 });
