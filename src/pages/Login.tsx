@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Coffee, User, Lock } from 'lucide-react';
+import { ShoppingCart, User, Lock } from 'lucide-react';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -34,20 +34,20 @@ const Login: React.FC = () => {
   };
   
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50 to-amber-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-blue-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-white rounded-lg shadow-lg overflow-hidden">
         <div className="p-8">
           <div className="flex justify-center mb-6">
-            <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center">
-              <Coffee size={32} className="text-amber-600" />
+            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+              <ShoppingCart size={32} className="text-blue-600" />
             </div>
           </div>
           
           <h1 className="text-2xl font-bold text-center text-gray-800 mb-2">
-            نور كافيه
+            شركة النصير للبورسلان
           </h1>
           <p className="text-center text-gray-600 mb-6">
-            قم بتسجيل الدخول للوصول إلى نظام نقطة البيع
+            قم بتسجيل الدخول للوصول إلى حسابك
           </p>
           
           {error && (
@@ -66,7 +66,7 @@ const Login: React.FC = () => {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full py-2 px-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-right"
+                  className="w-full py-2 px-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-right"
                   placeholder="أدخل البريد الإلكتروني"
                   required
                 />
@@ -83,7 +83,7 @@ const Login: React.FC = () => {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full py-2 px-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-right"
+                  className="w-full py-2 px-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-right"
                   placeholder="أدخل كلمة المرور"
                   required
                 />
@@ -93,8 +93,8 @@ const Login: React.FC = () => {
             
             <button
               type="submit"
-              className={`w-full py-2 px-4 bg-amber-600 text-white rounded-md font-medium ${
-                isLoading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-amber-700'
+              className={`w-full py-2 px-4 bg-blue-600 text-white rounded-md font-medium ${
+                isLoading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-blue-700'
               }`}
               disabled={isLoading}
             >
