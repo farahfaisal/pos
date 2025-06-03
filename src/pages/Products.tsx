@@ -10,14 +10,15 @@ import {
   Check,
   Save,
   FolderTree,
-  Filter
+  Filter,
+  RefreshCw
 } from 'lucide-react';
 import { Product } from '../types/Product';
 import { Category } from '../types/Category';
 import { formatCurrency } from '../utils/formatters';
-import { supabase } from '../lib/supabase';
 import { useProductImage } from '../hooks/useProductImage';
 import ProductImageUpload from '../components/products/ProductImageUpload';
+import * as woocommerce from '../lib/woocommerce';
 
 const Products: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -28,6 +29,7 @@ const Products: React.FC = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [newProduct, setNewProduct] = useState<Partial<Product>>({
     name: '',
@@ -48,18 +50,8 @@ const Products: React.FC = () => {
 
   const loadCategories = async () => {
     try {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .order('name');
-
-      if (error) throw error;
-
-      setCategories(data.map(category => ({
-        ...category,
-        createdAt: new Date(category.created_at),
-        updatedAt: new Date(category.updated_at)
-      })));
+      const wooCategories = await woocommerce.getCategories();
+      setCategories(wooCategories as Category[]);
     } catch (err) {
       console.error('Error loading categories:', err);
       setError('حدث خطأ أثناء تحميل التصنيفات');
@@ -71,18 +63,8 @@ const Products: React.FC = () => {
       setIsLoading(true);
       setError(null);
 
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .order('name');
-
-      if (error) throw error;
-
-      setProducts(data.map(product => ({
-        ...product,
-        createdAt: new Date(product.created_at),
-        updatedAt: new Date(product.updated_at)
-      })));
+      const wooProducts = await woocommerce.getProducts();
+      setProducts(wooProducts as Product[]);
     } catch (err) {
       console.error('Error loading products:', err);
       setError('حدث خطأ أثناء تحميل المنتجات');
@@ -96,29 +78,8 @@ const Products: React.FC = () => {
       if (!newProduct.name || !newProduct.price || !newProduct.categoryId) return;
       setError(null);
 
-      const { data, error } = await supabase
-        .from('products')
-        .insert([{
-          name: newProduct.name,
-          price: newProduct.price,
-          cost_price: newProduct.costPrice,
-          stock_quantity: newProduct.stockQuantity || 0,
-          category_id: newProduct.categoryId,
-          barcode: newProduct.barcode,
-          description: newProduct.description,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      setProducts([...products, {
-        ...data,
-        createdAt: new Date(data.created_at),
-        updatedAt: new Date(data.updated_at)
-      }]);
+      const createdProduct = await woocommerce.createProduct(newProduct);
+      setProducts([...products, createdProduct as Product]);
 
       setNewProduct({
         name: '',
@@ -141,25 +102,10 @@ const Products: React.FC = () => {
       if (!selectedProduct) return;
       setError(null);
 
-      const { error } = await supabase
-        .from('products')
-        .update({
-          name: selectedProduct.name,
-          price: selectedProduct.price,
-          cost_price: selectedProduct.costPrice,
-          stock_quantity: selectedProduct.stockQuantity,
-          category_id: selectedProduct.categoryId,
-          barcode: selectedProduct.barcode,
-          description: selectedProduct.description,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', selectedProduct.id);
-
-      if (error) throw error;
-
+      const updatedProduct = await woocommerce.updateProduct(selectedProduct.id, selectedProduct);
       setProducts(products.map(product => 
         product.id === selectedProduct.id 
-          ? { ...selectedProduct, updatedAt: new Date() }
+          ? updatedProduct as Product
           : product
       ));
 
@@ -181,13 +127,7 @@ const Products: React.FC = () => {
         await handleImageDelete(id, product.imageUrl);
       }
 
-      const { error } = await supabase
-        .from('products')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
+      await woocommerce.deleteProduct(id);
       setProducts(products.filter(product => product.id !== id));
     } catch (err) {
       console.error('Error deleting product:', err);
@@ -201,6 +141,7 @@ const Products: React.FC = () => {
       if (imageUrl) {
         if (selectedProduct) {
           setSelectedProduct({ ...selectedProduct, imageUrl });
+          await woocommerce.updateProduct(productId, { imageUrl });
         }
         setProducts(products.map(p => 
           p.id === productId ? { ...p, imageUrl } : p
@@ -216,12 +157,31 @@ const Products: React.FC = () => {
       await handleImageDelete(productId, imageUrl);
       if (selectedProduct) {
         setSelectedProduct({ ...selectedProduct, imageUrl: null });
+        await woocommerce.updateProduct(productId, { imageUrl: null });
       }
       setProducts(products.map(p => 
         p.id === productId ? { ...p, imageUrl: null } : p
       ));
     } catch (err) {
       console.error('Error removing image:', err);
+    }
+  };
+
+  const handleSync = async () => {
+    try {
+      setIsSyncing(true);
+      setError(null);
+      
+      await Promise.all([
+        loadCategories(),
+        loadProducts()
+      ]);
+
+      setIsSyncing(false);
+    } catch (err) {
+      console.error('Error syncing with WooCommerce:', err);
+      setError('حدث خطأ أثناء المزامنة مع ووكومرس');
+      setIsSyncing(false);
     }
   };
 
@@ -266,6 +226,19 @@ const Products: React.FC = () => {
         </div>
         
         <div className="flex gap-2 w-full sm:w-auto">
+          <button
+            onClick={handleSync}
+            disabled={isSyncing}
+            className={`flex items-center py-2 px-4 border border-gray-300 rounded-md ${
+              isSyncing 
+                ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                : 'bg-white text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <RefreshCw size={18} className={`ml-2 ${isSyncing ? 'animate-spin' : ''}`} />
+            مزامنة مع ووكومرس
+          </button>
+
           <div className="relative">
             <button
               onClick={() => setFilterCategory(null)}
@@ -324,7 +297,7 @@ const Products: React.FC = () => {
           {imageError}
         </div>
       )}
-      
+
       {/* Products table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="overflow-x-auto">
