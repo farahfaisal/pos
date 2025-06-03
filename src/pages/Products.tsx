@@ -10,12 +10,13 @@ import {
   Check,
   Save,
   FolderTree,
-  Filter
+  Filter,
+  RefreshCw
 } from 'lucide-react';
 import { Product } from '../types/Product';
 import { Category } from '../types/Category';
 import { formatCurrency } from '../utils/formatters';
-import { supabase } from '../lib/supabase';
+import { getProducts, getCategories } from '../lib/woocommerce';
 import { useProductImage } from '../hooks/useProductImage';
 import ProductImageUpload from '../components/products/ProductImageUpload';
 
@@ -41,54 +42,53 @@ const Products: React.FC = () => {
 
   const { handleImageUpload, handleImageDelete, isUploading, error: imageError } = useProductImage();
 
-  useEffect(() => {
-    loadCategories();
-    loadProducts();
-  }, []);
-
-  const loadCategories = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .order('name');
-
-      if (error) throw error;
-
-      setCategories(data.map(category => ({
-        ...category,
-        createdAt: new Date(category.created_at),
-        updatedAt: new Date(category.updated_at)
-      })));
-    } catch (err) {
-      console.error('Error loading categories:', err);
-      setError('حدث خطأ أثناء تحميل التصنيفات');
-    }
-  };
-
-  const loadProducts = async () => {
+  const loadWooCommerceData = async () => {
     try {
       setIsLoading(true);
       setError(null);
 
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .order('name');
+      // Fetch products from WooCommerce
+      const wooProducts = await getProducts();
+      const mappedProducts = wooProducts.map((wp: any) => ({
+        id: wp.id.toString(),
+        name: wp.name,
+        barcode: wp.sku,
+        price: parseFloat(wp.price),
+        stockQuantity: wp.stock_quantity || 0,
+        categoryId: wp.categories[0]?.id.toString(),
+        imageUrl: wp.images[0]?.src,
+        description: wp.description,
+        costPrice: parseFloat(wp.regular_price),
+        createdAt: new Date(wp.date_created),
+        updatedAt: new Date(wp.date_modified)
+      }));
+      setProducts(mappedProducts);
 
-      if (error) throw error;
+      // Fetch categories from WooCommerce
+      const wooCategories = await getCategories();
+      const mappedCategories = wooCategories.map((wc: any) => ({
+        id: wc.id.toString(),
+        name: wc.name,
+        description: wc.description,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }));
+      setCategories(mappedCategories);
 
-      setProducts(data.map(product => ({
-        ...product,
-        createdAt: new Date(product.created_at),
-        updatedAt: new Date(product.updated_at)
-      })));
     } catch (err) {
-      console.error('Error loading products:', err);
-      setError('حدث خطأ أثناء تحميل المنتجات');
+      console.error('Error loading WooCommerce data:', err);
+      setError('حدث خطأ أثناء تحميل البيانات من المتجر');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  useEffect(() => {
+    loadWooCommerceData();
+  }, []);
+
+  const handleRefresh = () => {
+    loadWooCommerceData();
   };
 
   const handleAddProduct = async () => {
@@ -266,6 +266,14 @@ const Products: React.FC = () => {
         </div>
         
         <div className="flex gap-2 w-full sm:w-auto">
+          <button
+            onClick={handleRefresh}
+            className="flex items-center py-2 px-4 border border-gray-300 rounded-md bg-white text-gray-700 hover:bg-gray-50"
+          >
+            <RefreshCw size={18} className="ml-2" />
+            تحديث
+          </button>
+
           <div className="relative">
             <button
               onClick={() => setFilterCategory(null)}
@@ -746,3 +754,5 @@ const Products: React.FC = () => {
 };
 
 export default Products;
+
+export default Products
