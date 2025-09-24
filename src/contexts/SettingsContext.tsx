@@ -30,11 +30,24 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) 
 
   const loadSettings = async () => {
     try {
+      // Check if Supabase is properly configured
+      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+        console.warn('Supabase configuration missing, using default settings');
+        setSettings({});
+        setIsLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('settings')
         .select('*');
 
-      if (error) throw error;
+      if (error) {
+        console.warn('Settings table not found or accessible, using default settings:', error);
+        setSettings({});
+        setIsLoading(false);
+        return;
+      }
 
       const settingsMap = data.reduce((acc, setting) => {
         acc[setting.key] = setting.value;
@@ -43,7 +56,8 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) 
 
       setSettings(settingsMap);
     } catch (error) {
-      console.error('Error loading settings:', error);
+      console.warn('Error loading settings, using defaults:', error);
+      setSettings({});
     } finally {
       setIsLoading(false);
     }
